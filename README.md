@@ -17,7 +17,7 @@ This weapon in your development arsenal transforms your Code IDE experience (Cli
 - 🌐 **Navigate your webapp** using BrowserUse (2x faster with operative backend)
 - 📊 **Capture network traffic** - all requests/responses at your fingertips
 - 🚨 **Collect console errors** - nothing escapes detection
-- 🤖 **Autonomous debugging** - the Cursor agent calls the web QA agent mcp server to test if the code it wrote works as epected end-to-end.
+- 🤖 **Autonomous debugging** - the Cursor agent calls the web QA agent mcp server to test if the code it wrote works as expected end-to-end.
 
 ## 🏁 Quick Start (macOS/Linux/Windows)
 
@@ -25,20 +25,28 @@ This weapon in your development arsenal transforms your Code IDE experience (Cli
    - Install `uv`: `curl -LsSf https://astral.sh/uv/install.sh | sh`
    - Install `npm`: Use your system's package manager (e.g., `brew install npm` on macOS)
 
-2. One-command setup with [uvx](https://github.com/astral-sh/uv):
+2. One-command setup with [uvx](https://docs.astral.sh/uv/guides/tools/):
 ```bash
 # Run the setup command (interactive - will prompt for API key)
-uvx --from git+https://github.com/Operative-Sh/web-eval-agent.git webEvalAgent
+uvx --from git+https://github.com/nandatheguntupalli/operative webEvalAgent
 ```
 
-3. Unleash the agent in Cursor Agent Mode with web_eval_agent (restart Cursor for the changes to take effect)
+3. The command will:
+   - Display ASCII art and a welcome message
+   - Install Playwright browsers
+   - Prompt you for your Operative API key
+   - Validate your API key
+   - Configure Cursor's MCP settings
 
-4. If any issues, see Issues section below
+4. Restart Cursor when prompted for the changes to take effect
+
+5. The web-eval-agent will now be available in Cursor Agent Mode
 
 ## 🚨 Issues 
 
-- If Playwright is not installed correctly, you may need to run: `npm install -g playwright`
-- Any issues feel free to open an Issue on this repo!
+- If Playwright is not installed correctly, the installer will attempt to install it using npm
+- If you encounter API key validation issues, the installer will guide you through the process
+- Any other issues? Feel free to open an Issue on this repo!
 
 ## 📋 Example MCP Server Output Report
 

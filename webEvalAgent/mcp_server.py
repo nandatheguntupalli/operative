@@ -9,6 +9,7 @@ import subprocess
 import json
 import sys
 import getpass
+import platform
 from enum import Enum
 from pathlib import Path
 
@@ -27,6 +28,15 @@ from webEvalAgent.src.api_utils import validate_api_key
 from webEvalAgent.src.tool_handlers import handle_web_evaluation
 from webEvalAgent.src.log_server import send_log
 
+# Colors for terminal output
+class Colors:
+    RED = '\033[0;31m'
+    GREEN = '\033[0;32m'
+    BLUE = '\033[0;34m'
+    YELLOW = '\033[1;33m'
+    NC = '\033[0m'  # No Color
+    BOLD = '\033[1m'
+
 # Create the MCP server
 mcp = FastMCP("Operative")
 
@@ -40,45 +50,135 @@ parser.add_argument('--setup', action='store_true', help='Run setup mode to conf
 parser.add_argument('--run-server', action='store_true', help='Run the MCP server in server mode')
 args = parser.parse_args()
 
+def print_header(message):
+    """Print a formatted header message"""
+    print(f"\n{Colors.BLUE}{Colors.BOLD}=== {message} ==={Colors.NC}\n")
+
+def print_success(message):
+    """Print a success message"""
+    print(f"{Colors.GREEN}✓ {message}{Colors.NC}")
+
+def print_error(message):
+    """Print an error message and exit"""
+    print(f"{Colors.RED}✗ {message}{Colors.NC}")
+    sys.exit(1)
+
+def print_info(message):
+    """Print an info message"""
+    print(f"{Colors.YELLOW}ℹ {message}{Colors.NC}")
+
+def print_welcome():
+    """Print welcome message with ASCII art"""
+    art = """                                    $$$$                                    
+                                 $$$    $$$                                 
+                              $$$          $$$                              
+                           $$$     $$$$$$     $$$                           
+                        $$$     $$$  $$  $$$     $$$c                       
+                    c$$$     $$$     $$     $$$     $$$$                    
+                   $$$$      $$$x    $$     $$$      $$$$                   
+                   $$  $$$      >$$$ $$ ;$$$      $$$  $$                   
+                   $$     $$$       $$$$8      $$$     $$                   
+                   $$        $$$            $$$        $$                   
+                   $$   $$$     $$$$     $$$     $$$   $$                   
+                   $$   $  $$$     I$$$$$     $$$  $   $$                   
+                   $$   $     $$$    $$    $$$     $   $$                   
+                   $$   $     $$$$   $$   $$$$     $   $$                   
+                   $$   $  $$$   $   $$   $   $$$  $   $$                   
+                   $$   $$$      $   $$   $      $$$   $$                   
+                   $$     $$$    $   $$   $    $$$     $$                   
+                    $$$      $$$ $   $$   $ $$$      $$$                    
+                       $$$      $$   $$   $$      $$$                       
+                          $$$        $$        $$$                          
+                             $$$     $$     $$$                             
+                                $$$  $$  $$$                                
+                                   $$$$$$                                   
+"""
+    print(art)
+    print(f"\n{Colors.BOLD}🚀 Welcome to the Operative Web Eval Agent Installer{Colors.NC}")
+    print(f"This script will set up everything you need to get started.\n")
+
+def run_command(command, shell=False):
+    """Run a command and return its output"""
+    try:
+        result = subprocess.run(
+            command, 
+            shell=shell, 
+            check=True, 
+            text=True, 
+            capture_output=True
+        )
+        return result.stdout
+    except subprocess.CalledProcessError as e:
+        print_error(f"Command failed: {e}")
+        return None
+
 def setup_agent():
     """
     Run the setup process for the web-eval-agent.
     This includes installing Playwright browsers, handling API key, and configuring Cursor.
     """
-    send_log("Starting web-eval-agent setup", "🚀")
+    # Print welcome message with ASCII art
+    print_welcome()
     
     # Step 1: Install Playwright browsers
-    send_log("Installing Playwright browsers...", "🔍")
+    print_header("Installing Playwright browsers")
+    print_info("Installing browser binaries for web automation...")
+    
     try:
+        # Run playwright install with proper output
+        print_info("Installing Playwright browsers (this may take a few minutes)...")
         subprocess.run(["playwright", "install", "--with-deps"], check=True)
-        send_log("Successfully installed Playwright browsers", "✅")
+        print_success("Successfully installed Playwright browsers")
     except subprocess.CalledProcessError as e:
-        send_log(f"Error installing Playwright browsers: {e}", "❌")
-        send_log("Please install Playwright manually: playwright install --with-deps", "⚠️")
+        print_error(f"Error installing Playwright browsers: {e}")
     except FileNotFoundError:
-        send_log("Playwright executable not found. Make sure it's installed correctly.", "❌")
-        send_log("You can install it with: pip install playwright", "📝")
-        sys.exit(1)
+        print_info("Playwright executable not found. Installing it now...")
+        try:
+            # Try to install Playwright with npm if not found
+            if platform.system() == "Windows":
+                subprocess.run(["npm", "install", "-g", "playwright"], check=True)
+            else:
+                subprocess.run(["npm", "install", "-g", "chromium"], check=True)
+                subprocess.run(["npm", "install", "-g", "playwright"], check=True)
+            subprocess.run(["playwright", "install", "--with-deps"], check=True)
+            print_success("Successfully installed Playwright browsers")
+        except Exception as e:
+            print_error(f"Failed to install Playwright: {e}")
         
     # Step 2: Handle Operative API Key
+    print_header("API Key Configuration")
+    print(f"An Operative.sh API key is required for this installation.")
+    print(f"If you don't have one, please visit {Colors.BOLD}https://operative.sh{Colors.NC} to get your key.\n")
+    
     api_key = os.environ.get('OPERATIVE_API_KEY')
     if not api_key:
-        send_log("Operative API key not found in environment variables.", "🔍")
-        send_log("You can get an API key (free) from https://operative.sh", "📝")
-        api_key = getpass.getpass("Enter your Operative API key: ")
-        
-    # Validate the API key
-    send_log("Validating API key...", "🔍")
-    is_valid = asyncio.run(validate_api_key(api_key))
-    if not is_valid:
-        send_log("Error: Invalid API key. Please provide a valid OperativeAI API key.", "❌")
-        send_log("You can get a key at https://operative.sh", "📝")
-        sys.exit(1)
-    
-    send_log("API key validated successfully", "✅")
+        # Prompt for API key with validation
+        while True:
+            api_key = getpass.getpass("Please enter your Operative.sh API key: ")
+            if not api_key:
+                print(f"{Colors.RED}✗ API key cannot be empty{Colors.NC}")
+                continue
+            
+            # Validate the API key
+            print_info("Validating API key with Operative servers...")
+            is_valid = asyncio.run(validate_api_key(api_key))
+            if is_valid:
+                print_success("API key validated successfully")
+                break
+            else:
+                print(f"{Colors.YELLOW}Would you like to try again? (y/n){Colors.NC}")
+                response = input().lower()
+                if response != 'y':
+                    print_error("Installation cancelled - valid API key required")
+    else:
+        # Validate existing API key
+        print_info("Found API key in environment. Validating...")
+        is_valid = asyncio.run(validate_api_key(api_key))
+        if not is_valid:
+            print_error("Invalid API key in environment. Please provide a valid OperativeAI API key.")
     
     # Step 3: Configure Cursor
-    send_log("Configuring Cursor MCP settings...", "🔍")
+    print_header("Configuring MCP server")
     cursor_config_path = Path.home() / ".cursor" / "mcp.json"
     
     # Read existing config or create a new one
@@ -86,18 +186,20 @@ def setup_agent():
         if cursor_config_path.exists():
             with open(cursor_config_path, 'r') as f:
                 config_data = json.load(f)
+            print_info(f"Found existing MCP configuration file")
         else:
             config_data = {"mcpServers": {}}
+            print_info(f"Creating new MCP configuration file")
     except (FileNotFoundError, json.JSONDecodeError):
-        send_log(f"Creating new Cursor config at {cursor_config_path}", "📝")
         config_data = {"mcpServers": {}}
+        print_info(f"Creating new MCP configuration file")
     
     # Define the server configuration for Cursor
     server_config_for_cursor = {
         "command": "uvx",
         "args": [
             "--from",
-            "git+https://github.com/Operative-Sh/web-eval-agent.git",
+            "git+https://github.com/nandatheguntupalli/operative",
             "webEvalAgent"
         ],
         "env": {
@@ -113,14 +215,20 @@ def setup_agent():
         os.makedirs(cursor_config_path.parent, exist_ok=True)
         with open(cursor_config_path, 'w') as f:
             json.dump(config_data, f, indent=2)
-        send_log(f"Successfully updated Cursor configuration at {cursor_config_path}", "✅")
+        print_success(f"MCP server configuration updated successfully")
     except Exception as e:
-        send_log(f"Error writing to Cursor config: {e}", "❌")
-        sys.exit(1)
+        print_error(f"Error writing to Cursor config: {e}")
     
-    send_log("Setup completed successfully! 🎉", "🏁")
-    send_log("Please restart Cursor for the changes to take effect.", "⚠️")
-    send_log("You can now use the web-eval-agent in Cursor Agent Mode.", "📝")
+    # Installation complete
+    print_header("Installation Complete! 🎉")
+    print("Your Operative Web Eval Agent has been set up successfully.")
+    print(f"\nYou can now use the web_eval_agent in Cursor Agent Mode.")
+    print(f"""
+{Colors.BOLD}{Colors.RED}⚠️  IMPORTANT: You must restart Cursor for changes to take effect! ⚠️{Colors.NC}
+{Colors.RED}To restart the MCP server, you can close and reopen Cursor, or restart it from the Command Palette.{Colors.NC}
+""")
+    print(f"\nThank you for installing! 🙏\n")
+    print(f"Built with ❤️  by Operative.sh")
 
 @mcp.tool(name=BrowserTools.WEB_EVAL_AGENT)
 async def web_eval_agent(url: str, task: str, working_directory: str, ctx: Context) -> list[TextContent]:
@@ -178,13 +286,11 @@ def main():
         # Server Mode: Run the MCP server directly
         api_key = os.environ.get('OPERATIVE_API_KEY')
         if not api_key:
-            send_log("Error: No API key provided. Please set the OPERATIVE_API_KEY environment variable.", "❌")
-            send_log("Run with --setup to configure the API key.", "📝")
-            sys.exit(1)
+            print_error("Error: No API key provided. Please set the OPERATIVE_API_KEY environment variable.")
         
         try:
             # Run the FastMCP server
-            send_log("Starting web-eval-agent MCP server", "🚀")
+            print_info("Starting web-eval-agent MCP server")
             mcp.run(transport='stdio')
         finally:
             # Ensure resources are cleaned up
