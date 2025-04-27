@@ -98,8 +98,7 @@ def setup_agent():
         "args": [
             "--from",
             "git+https://github.com/Operative-Sh/web-eval-agent.git",
-            "webEvalAgent",
-            "--run-server"
+            "webEvalAgent"
         ],
         "env": {
             "OPERATIVE_API_KEY": api_key
