@@ -204,7 +204,7 @@ def check_and_install_dependencies():
 def setup_agent():
     """
     Run the setup process for the web-eval-agent.
-    This includes installing Playwright browsers, handling API key, and configuring Cursor.
+    This includes handling API key and configuring Cursor.
     """
     # Print welcome message with ASCII art
     print_welcome()
@@ -212,32 +212,7 @@ def setup_agent():
     # Check for and install required dependencies
     check_and_install_dependencies()
     
-    # Step 1: Install Playwright browsers
-    print_header("Installing Playwright browsers")
-    print_info("Installing browser binaries for web automation...")
-    
-    try:
-        # Run playwright install with proper output
-        print_info("Installing Playwright browsers (this may take a few minutes)...")
-        subprocess.run(["playwright", "install", "--with-deps"], check=True)
-        print_success("Successfully installed Playwright browsers")
-    except subprocess.CalledProcessError as e:
-        print_error(f"Error installing Playwright browsers: {e}")
-    except FileNotFoundError:
-        print_info("Playwright executable not found. Installing it now...")
-        try:
-            # Try to install Playwright with npm if not found
-            if platform.system() == "Windows":
-                subprocess.run(["npm", "install", "-g", "playwright"], check=True)
-            else:
-                subprocess.run(["npm", "install", "-g", "chromium"], check=True)
-                subprocess.run(["npm", "install", "-g", "playwright"], check=True)
-            subprocess.run(["playwright", "install", "--with-deps"], check=True)
-            print_success("Successfully installed Playwright browsers")
-        except Exception as e:
-            print_error(f"Failed to install Playwright: {e}")
-        
-    # Step 2: Handle Operative API Key
+    # Step 1: Handle Operative API Key
     print_header("API Key Configuration")
     print(f"An Operative.sh API key is required for this installation.")
     print(f"If you don't have one, please visit {Colors.BOLD}https://operative.sh{Colors.NC} to get your key.\n")
@@ -269,7 +244,7 @@ def setup_agent():
         if not is_valid:
             print_error("Invalid API key in environment. Please provide a valid OperativeAI API key.")
     
-    # Step 3: Configure Cursor
+    # Step 2: Configure Cursor
     print_header("Configuring MCP server")
     cursor_config_path = Path.home() / ".cursor" / "mcp.json"
     

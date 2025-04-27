@@ -35,7 +35,7 @@ COPY requirements.txt .
 # Install Python dependencies
 RUN pip install -r requirements.txt
 
-# Install playwright browsers
+# Install playwright browsers (still needed for containerized environments)
 RUN pip install playwright && playwright install chromium
 RUN playwright install-deps
 

@@ -30,7 +30,6 @@ uvx --from git+https://github.com/nandatheguntupalli/operative webEvalAgent
 2. The command will:
    - Display ASCII art and a welcome message
    - Check for and install required dependencies (npm, jq) if missing
-   - Install Playwright browsers
    - Prompt you for your Operative API key
    - Validate your API key
    - Configure Cursor's MCP settings
