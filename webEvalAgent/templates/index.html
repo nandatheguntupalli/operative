@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Operative Control Center</title>
+    <link rel="icon" href="https://www.operative.sh/favicon.ico?v=2" type="image/x-icon">
+    <script src="https://cdn.socket.io/4.7.5/socket.io.min.js"></script>
+    <!-- Add Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        // Optional: Tailwind configuration (can be customized)
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        // Define custom colors from the target style if needed
+                        'terminal-bg': '#1C1C1C',
+                        'terminal-header': '#2A2A2A',
+                        'accent-green': '#27C93F',
+                    },
+                    fontFamily: {
+                        // Ensure sans and mono are available
+                        sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+                        mono: ['"SF Mono"', '"Consolas"', '"Menlo"', 'monospace'],
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Remove the old style block -->
+    <style>
+        /* Remove all previous styles */
+    </style>
+</head>
+<!-- Apply base dark theme styles -->
+<body class="bg-black text-gray-300 font-sans flex flex-col h-screen overflow-hidden">
+    <!-- Style header -->
+    <header class="bg-gray-900 border-b border-gray-800 text-white p-3 flex justify-between items-center flex-shrink-0">
+        <!-- Add favicon before the title -->
+        <h1 class="text-lg font-mono font-semibold flex items-center">
+            <img src="https://www.operative.sh/favicon.ico?v=2" alt="Operative Favicon" class="h-5 w-5 mr-2 inline-block align-middle">
+            <span><a href="https://www.operative.sh" target="_blank" class="hover:underline">Operative Control Center</a></span>
+        </h1>
+        <!-- View toggle button -->
+        <div class="flex items-center">
+            <span class="mr-2 text-xs">View Mode:</span>
+            <button id="view-toggle" class="bg-gray-800 hover:bg-gray-700 text-white text-xs border border-gray-600 rounded-md px-3 py-1 transition-all duration-300">
+                <span class="separated-label">Separated</span>
+                <span class="joined-label hidden">Joined</span>
+            </button>
+            <label class="ml-4 flex items-center cursor-pointer">
+                <span class="text-xs mr-2">Auto-scroll:</span>
+                <div class="relative">
+                    <input type="checkbox" id="auto-scroll-toggle" class="sr-only" checked>
+                    <div class="block bg-gray-600 w-10 h-5 rounded-full"></div>
+                    <div class="dot absolute left-0.5 top-0.5 bg-white w-4 h-4 rounded-full transition-transform duration-300 transform translate-x-0"></div>
+                </div>
+            </label>
+        </div>
+    </header>
+
+    <!-- Separated view (default) -->
+    <main id="separated-view" class="container mx-auto px-4 max-w-7xl flex-grow grid grid-cols-1 md:grid-cols-3 gap-4 py-4 overflow-hidden">
+        <!-- Agent/Status Log Column (Bento Box Style) -->
+        <div class="log-column bg-terminal-bg border border-gray-800 rounded-2xl flex flex-col overflow-hidden">
+            <div class="log-header bg-terminal-header border-b border-gray-800 p-3 flex justify-between items-center text-sm font-medium">
+                <h2 class="text-white">🚦 Agent & Status Logs</h2>
+                <!-- Style copy button -->
+                <button class="copy-button bg-transparent text-white text-xs border border-gray-600 hover:bg-white/10 rounded-md px-2 py-1" data-target="agent-log-container">📋 Copy</button>
+            </div>
+            <!-- Style log container -->
+            <div id="agent-log-container" class="log-container flex-grow overflow-y-auto p-3 font-mono text-xs leading-relaxed"></div>
+        </div>
+
+        <!-- Console Log Column (Bento Box Style) -->
+        <div class="log-column bg-terminal-bg border border-gray-800 rounded-2xl flex flex-col overflow-hidden">
+            <div class="log-header bg-terminal-header border-b border-gray-800 p-3 flex justify-between items-center text-sm font-medium">
+                <h2 class="text-white">🖥️ Console Logs</h2>
+                <button class="copy-button bg-transparent text-white text-xs border border-gray-600 hover:bg-white/10 rounded-md px-2 py-1" data-target="console-log-container">📋 Copy</button>
+            </div>
+            <div id="console-log-container" class="log-container flex-grow overflow-y-auto p-3 font-mono text-xs leading-relaxed"></div>
+        </div>
+
+        <!-- Network Log Column (Bento Box Style) -->
+        <div class="log-column bg-terminal-bg border border-gray-800 rounded-2xl flex flex-col overflow-hidden">
+            <div class="log-header bg-terminal-header border-b border-gray-800 p-3 flex justify-between items-center text-sm font-medium">
+                <h2 class="text-white">↔️ Network Activity</h2>
+                <button class="copy-button bg-transparent text-white text-xs border border-gray-600 hover:bg-white/10 rounded-md px-2 py-1" data-target="network-log-container">📋 Copy</button>
+            </div>
+            <div id="network-log-container" class="log-container flex-grow overflow-y-auto p-3 font-mono text-xs leading-relaxed"></div>
+        </div>
+    </main>
+
+    <!-- Joined view (initially hidden) -->
+    <main id="joined-view" class="container mx-auto px-4 max-w-7xl flex-grow grid grid-cols-1 gap-4 py-4 overflow-hidden hidden">
+        <!-- Combined Log Column -->
+        <div class="log-column bg-terminal-bg border border-gray-800 rounded-2xl flex flex-col overflow-hidden">
+            <div class="log-header bg-terminal-header border-b border-gray-800 p-3 flex justify-between items-center text-sm font-medium">
+                <h2 class="text-white">⏱️ Chronological Timeline</h2>
+                <button class="copy-button bg-transparent text-white text-xs border border-gray-600 hover:bg-white/10 rounded-md px-2 py-1" data-target="combined-log-container">📋 Copy</button>
+            </div>
+            <div id="combined-log-container" class="log-container flex-grow overflow-y-auto p-3 font-mono text-xs leading-relaxed"></div>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', (event) => {
+            const socket = io();
+            const separatedView = document.getElementById('separated-view');
+            const joinedView = document.getElementById('joined-view');
+            const viewToggle = document.getElementById('view-toggle');
+            const autoScrollToggle = document.getElementById('auto-scroll-toggle');
+            const autoScrollDot = autoScrollToggle.nextElementSibling.nextElementSibling;
+            let isJoinedView = false;
+            let autoScrollEnabled = true;
+
+            // Initialize log containers
+            const logContainers = {
+                agent: document.getElementById('agent-log-container'),
+                status: document.getElementById('agent-log-container'), // Status logs go to agent pane
+                console: document.getElementById('console-log-container'),
+                network: document.getElementById('network-log-container'),
+                combined: document.getElementById('combined-log-container')
+            };
+
+            // Store logs chronologically for the combined view
+            const chronologicalLogs = [];
+            const copyButtons = document.querySelectorAll('.copy-button');
+
+            // Toggle view between separated and joined
+            viewToggle.addEventListener('click', () => {
+                isJoinedView = !isJoinedView;
+                if (isJoinedView) {
+                    separatedView.classList.add('hidden');
+                    joinedView.classList.remove('hidden');
+                    document.querySelector('.separated-label').classList.add('hidden');
+                    document.querySelector('.joined-label').classList.remove('hidden');
+                    renderChronologicalLogs(); // Re-render the combined view
+                } else {
+                    separatedView.classList.remove('hidden');
+                    joinedView.classList.add('hidden');
+                    document.querySelector('.separated-label').classList.remove('hidden');
+                    document.querySelector('.joined-label').classList.add('hidden');
+                }
+            });
+
+            // Toggle auto-scroll
+            autoScrollToggle.addEventListener('change', () => {
+                autoScrollEnabled = autoScrollToggle.checked;
+                if (autoScrollEnabled) {
+                    autoScrollDot.classList.add('translate-x-5');
+                    // Scroll all containers to bottom
+                    for (const container of Object.values(logContainers)) {
+                        container.scrollTop = container.scrollHeight;
+                    }
+                } else {
+                    autoScrollDot.classList.remove('translate-x-5');
+                }
+            });
+
+            // Initialize toggle state
+            if (autoScrollEnabled) {
+                autoScrollDot.classList.add('translate-x-5');
+            }
+
+            function addLogEntry(container, text, type, timestamp = new Date().toLocaleTimeString()) {
+                const entry = document.createElement('div');
+                // Style log entry
+                entry.className = 'log-entry py-0.5 border-b border-gray-800/50'; // Use classList.add for dynamic classes
+                entry.textContent = text; // Already formatted with emoji
+
+                // Apply Tailwind color classes based on log content or type
+                if (type === 'status' && text.includes('❌')) {
+                     entry.classList.add('text-red-400'); // Error color
+                } else if (type === 'status') {
+                     entry.classList.add('text-cyan-400'); // Status color
+                } else if (type === 'console' && text.toLowerCase().includes('error')) {
+                    entry.classList.add('text-red-400', 'font-semibold'); // Console Error color
+                } else if (type === 'console' && text.toLowerCase().includes('warn')) {
+                    entry.classList.add('text-yellow-400'); // Console Warn color
+                }
+                // Default text color is inherited from body (text-gray-300)
+
+                container.appendChild(entry);
+                
+                // Auto-scroll if enabled
+                if (autoScrollEnabled) {
+                    scrollToBottom(container);
+                }
+
+                // Store log for chronological view
+                chronologicalLogs.push({
+                    text: text,
+                    type: type,
+                    timestamp: timestamp,
+                    element: entry.cloneNode(true)
+                });
+
+                // If in joined view, update it
+                if (isJoinedView) {
+                    renderChronologicalLogs();
+                }
+            }
+
+            function renderChronologicalLogs() {
+                // Clear the combined container
+                logContainers.combined.innerHTML = '';
+                
+                // Add timestamp prefix to each log
+                chronologicalLogs.forEach(log => {
+                    const entry = log.element.cloneNode(true);
+                    
+                    // Add type indicator prefix
+                    const typeIndicator = document.createElement('span');
+                    typeIndicator.className = 'mr-1';
+                    
+                    if (log.type === 'agent' || log.type === 'status') {
+                        typeIndicator.textContent = '🤖 ';
+                        typeIndicator.className += ' text-blue-400';
+                    } else if (log.type === 'console') {
+                        typeIndicator.textContent = '🖥️ ';
+                        typeIndicator.className += ' text-green-400';
+                    } else if (log.type === 'network') {
+                        typeIndicator.textContent = '🌐 ';
+                        typeIndicator.className += ' text-purple-400';
+                    }
+                    
+                    // Prepend the timestamp and type indicator
+                    const content = entry.textContent;
+                    entry.textContent = '';
+                    const timestampSpan = document.createElement('span');
+                    timestampSpan.className = 'text-gray-500 mr-1';
+                    timestampSpan.textContent = `[${log.timestamp}]`;
+                    entry.appendChild(timestampSpan);
+                    entry.appendChild(typeIndicator);
+                    entry.appendChild(document.createTextNode(content));
+                    
+                    logContainers.combined.appendChild(entry);
+                });
+                
+                // Auto-scroll if enabled
+                if (autoScrollEnabled) {
+                    scrollToBottom(logContainers.combined);
+                }
+            }
+
+            socket.on('connect', () => {
+                console.log('Connected to log server');
+                addLogEntry(logContainers.status, `✅ Connected to log server at ${new Date().toLocaleTimeString()}`, 'status');
+            });
+
+            socket.on('disconnect', () => {
+                console.log('Disconnected from log server');
+                addLogEntry(logContainers.status, `❌ Disconnected from log server at ${new Date().toLocaleTimeString()}`, 'status');
+            });
+
+            socket.on('log_message', (msg) => {
+                const logType = msg.type || 'agent';
+                const targetContainer = logContainers[logType] || logContainers.agent;
+
+                if (targetContainer) {
+                    addLogEntry(targetContainer, msg.data, logType);
+                } else {
+                    console.warn(`No container found for log type: ${logType}`);
+                    addLogEntry(logContainers.agent, `[${logType}] ${msg.data}`, logType);
+                }
+            });
+
+            copyButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const targetId = button.getAttribute('data-target');
+                    const container = document.getElementById(targetId);
+                    if (!container) return;
+
+                    const logs = container.textContent || container.innerText;
+                    navigator.clipboard.writeText(logs).then(() => {
+                        const originalText = button.textContent;
+                        button.textContent = '✅ Copied!';
+                        setTimeout(() => {
+                            button.textContent = originalText; // Restore original text (includes icon)
+                        }, 2000);
+                    }).catch(err => {
+                        console.error('Failed to copy logs: ', err);
+                        alert(`Failed to copy ${targetId} logs to clipboard.`);
+                    });
+                });
+            });
+
+            function scrollToBottom(container) {
+                container.scrollTop = container.scrollHeight;
+            }
+
+            // Add initial messages to the agent/status container
+            addLogEntry(logContainers.status, `🕒 Initializing Log Viewer at ${new Date().toLocaleTimeString()}...`, 'status');
+        });
+    </script>
+</body>
+</html> 
