@@ -19,28 +19,25 @@ This weapon in your development arsenal transforms your Code IDE experience (Cli
 - 🚨 **Collect console errors** - nothing escapes detection
 - 🤖 **Autonomous debugging** - the Cursor agent calls the web QA agent mcp server to test if the code it wrote works as epected end-to-end.
 
-## 🏁 Quick Start (macOS/Linux)
+## 🏁 Quick Start (macOS/Linux/Windows)
 
-1. Pre-requisites: brew: `/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"`, npm: (`brew install npm`), jq: `brew install jq` 
-2. Run the installer after [getting an api key (free)](https://www.operative.sh) 
+1. Pre-requisites: Make sure you have `uv` and `npm` installed:
+   - Install `uv`: `curl -LsSf https://astral.sh/uv/install.sh | sh`
+   - Install `npm`: Use your system's package manager (e.g., `brew install npm` on macOS)
+
+2. One-command setup with [uvx](https://github.com/astral-sh/uv):
 ```bash
-# Feel welcome to inspect the installer script like so:
-# curl -LSf https://operative.sh/install.sh | less -N
-# Download, install, and remove the installer script
-curl -LSf https://operative.sh/install.sh -o install.sh && bash install.sh && rm install.sh
+# Run the setup command (interactive - will prompt for API key)
+uvx --from git+https://github.com/Operative-Sh/web-eval-agent.git webEvalAgent
 ```
-3. Unleash the agent in Cursor Agent Mode with web_eval_agent (verify tool refreshed or restart Cursor)
+
+3. Unleash the agent in Cursor Agent Mode with web_eval_agent (restart Cursor for the changes to take effect)
+
 4. If any issues, see Issues section below
 
-## 🛠️ Manual Windows Installation (Cline) 
-```bash
-# 1. Get your API key at operative.sh
-# 2. Install uv (curl -LsSf https://astral.sh/uv/install.sh | sh)
-# 3. uvx --from git+https://github.com/Operative-Sh/web-eval-agent.git playwright install
-# 4. Unleash the agent in Cline with web_eval_agent (may have to restart Cline) 
-```
 ## 🚨 Issues 
-- Initial tool calls Playwright issues, fix pushed 4/14, `npm install -g playwright` playwright issues on tool call. 
+
+- If Playwright is not installed correctly, you may need to run: `npm install -g playwright`
 - Any issues feel free to open an Issue on this repo!
 
 ## 📋 Example MCP Server Output Report
@@ -51,13 +48,13 @@ curl -LSf https://operative.sh/install.sh -o install.sh && bash install.sh && rm
 
 🔍 Agent Steps
   📍 1. Navigate → http://localhost:5173
-  📍 2. Click     “Login”        (button index 2)
-  📍 3. Click     “API Keys”     (button index 4)
-  📍 4. Click     “Create Key”   (button index 9)
-  📍 5. Type      “Test API Key” (input index 2)
-  📍 6. Click     “Done”         (button index 3)
-  📍 7. Click     “Delete”       (button index 10)
-  📍 8. Click     “Delete”       (confirm index 3)
+  📍 2. Click     "Login"        (button index 2)
+  📍 3. Click     "API Keys"     (button index 4)
+  📍 4. Click     "Create Key"   (button index 9)
+  📍 5. Type      "Test API Key" (input index 2)
+  📍 6. Click     "Done"         (button index 3)
+  📍 7. Click     "Delete"       (button index 10)
+  📍 8. Click     "Delete"       (confirm index 3)
   🏁 Flow tested successfully – UX felt smooth and intuitive.
 
 🖥️ Console Logs (10)
@@ -79,7 +76,7 @@ curl -LSf https://operative.sh/install.sh -o install.sh && bash install.sh && rm
      …
   01:17:45.038 🤖 🏁 Flow finished – deletion verified
   01:17:47.038 🤖 📋 Conclusion repeated above
-👁️  See the “Operative Control Center” dashboard for live logs.
+👁️  See the "Operative Control Center" dashboard for live logs.
 
 
 ---
