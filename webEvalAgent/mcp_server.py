@@ -10,6 +10,7 @@ import json
 import sys
 import getpass
 import platform
+import shutil
 from enum import Enum
 from pathlib import Path
 
@@ -97,6 +98,10 @@ def print_welcome():
     print(f"\n{Colors.BOLD}🚀 Welcome to the Operative Web Eval Agent Installer{Colors.NC}")
     print(f"This script will set up everything you need to get started.\n")
 
+def command_exists(command):
+    """Check if a command exists in the system PATH"""
+    return shutil.which(command) is not None
+
 def run_command(command, shell=False):
     """Run a command and return its output"""
     try:
@@ -112,6 +117,90 @@ def run_command(command, shell=False):
         print_error(f"Command failed: {e}")
         return None
 
+def check_and_install_dependencies():
+    """Check for and install required dependencies (npm and jq)"""
+    print_header("Checking dependencies")
+    
+    # Check for npm
+    if not command_exists("npm"):
+        print_info("npm not found. Installing Node.js and npm...")
+        
+        system = platform.system()
+        if system == "Darwin":  # macOS
+            try:
+                # Try to use Homebrew
+                if command_exists("brew"):
+                    run_command(["brew", "install", "node"])
+                    print_success("npm installed successfully via Homebrew")
+                else:
+                    print_info("Homebrew not found. Please install Node.js/npm manually from https://nodejs.org/")
+                    print_info("After installing npm, run this script again.")
+                    sys.exit(1)
+            except Exception as e:
+                print_error(f"Failed to install npm: {e}")
+                
+        elif system == "Linux":
+            try:
+                # Try apt-get for Debian/Ubuntu
+                if command_exists("apt-get"):
+                    run_command(["sudo", "apt-get", "update"])
+                    run_command(["sudo", "apt-get", "install", "-y", "nodejs", "npm"])
+                    print_success("npm installed successfully via apt-get")
+                # Try yum for RHEL/CentOS/Fedora
+                elif command_exists("yum"):
+                    run_command(["sudo", "yum", "install", "-y", "nodejs", "npm"])
+                    print_success("npm installed successfully via yum")
+                else:
+                    print_info("Could not determine package manager. Please install Node.js/npm manually.")
+                    print_info("After installing npm, run this script again.")
+                    sys.exit(1)
+            except Exception as e:
+                print_error(f"Failed to install npm: {e}")
+                
+        elif system == "Windows":
+            print_info("Please install Node.js and npm from https://nodejs.org/")
+            print_info("After installing npm, run this script again.")
+            sys.exit(1)
+    else:
+        print_success("npm is already installed")
+    
+    # Check for jq
+    if not command_exists("jq"):
+        print_info("jq not found. Installing jq...")
+        
+        system = platform.system()
+        if system == "Darwin":  # macOS
+            try:
+                # Try to use Homebrew
+                if command_exists("brew"):
+                    run_command(["brew", "install", "jq"])
+                    print_success("jq installed successfully via Homebrew")
+                else:
+                    print_info("Homebrew not found. jq installation skipped, but it's not critical for this script.")
+            except Exception as e:
+                print_info(f"Failed to install jq: {e}. Continuing without jq (not critical).")
+                
+        elif system == "Linux":
+            try:
+                # Try apt-get for Debian/Ubuntu
+                if command_exists("apt-get"):
+                    run_command(["sudo", "apt-get", "update"])
+                    run_command(["sudo", "apt-get", "install", "-y", "jq"])
+                    print_success("jq installed successfully via apt-get")
+                # Try yum for RHEL/CentOS/Fedora
+                elif command_exists("yum"):
+                    run_command(["sudo", "yum", "install", "-y", "jq"])
+                    print_success("jq installed successfully via yum")
+                else:
+                    print_info("Could not determine package manager. jq installation skipped, but it's not critical for this script.")
+            except Exception as e:
+                print_info(f"Failed to install jq: {e}. Continuing without jq (not critical).")
+                
+        elif system == "Windows":
+            print_info("jq installation on Windows skipped, but it's not critical for this script.")
+    else:
+        print_success("jq is already installed")
+
 def setup_agent():
     """
     Run the setup process for the web-eval-agent.
@@ -119,6 +208,9 @@ def setup_agent():
     """
     # Print welcome message with ASCII art
     print_welcome()
+    
+    # Check for and install required dependencies
+    check_and_install_dependencies()
     
     # Step 1: Install Playwright browsers
     print_header("Installing Playwright browsers")
