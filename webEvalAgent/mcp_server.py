@@ -70,29 +70,29 @@ def print_info(message):
 
 def print_welcome():
     """Print welcome message with ASCII art"""
-    art = """                                    $$$$                                    
-                                 $$$    $$$                                 
-                              $$$          $$$                              
-                           $$$     $$$$$$     $$$                           
-                        $$$     $$$  $$  $$$     $$$c                       
-                    c$$$     $$$     $$     $$$     $$$$                    
-                   $$$$      $$$x    $$     $$$      $$$$                   
-                   $$  $$$      >$$$ $$ ;$$$      $$$  $$                   
-                   $$     $$$       $$$$8      $$$     $$                   
-                   $$        $$$            $$$        $$                   
-                   $$   $$$     $$$$     $$$     $$$   $$                   
-                   $$   $  $$$     I$$$$$     $$$  $   $$                   
-                   $$   $     $$$    $$    $$$     $   $$                   
-                   $$   $     $$$$   $$   $$$$     $   $$                   
-                   $$   $  $$$   $   $$   $   $$$  $   $$                   
-                   $$   $$$      $   $$   $      $$$   $$                   
-                   $$     $$$    $   $$   $    $$$     $$                   
-                    $$$      $$$ $   $$   $ $$$      $$$                    
-                       $$$      $$   $$   $$      $$$                       
-                          $$$        $$        $$$                          
-                             $$$     $$     $$$                             
-                                $$$  $$  $$$                                
-                                   $$$$$$                                   
+    art = """                                    $$$$
+                                 $$$    $$$
+                              $$$          $$$
+                           $$$     $$$$$$     $$$
+                        $$$     $$$  $$  $$$     $$$c
+                    c$$$     $$$     $$     $$$     $$$$
+                   $$$$      $$$x    $$     $$$      $$$$
+                   $$  $$$      >$$$ $$ ;$$$      $$$  $$
+                   $$     $$$       $$$$8      $$$     $$
+                   $$        $$$            $$$        $$
+                   $$   $$$     $$$$     $$$     $$$   $$
+                   $$   $  $$$     I$$$$$     $$$  $   $$
+                   $$   $     $$$    $$    $$$     $   $$
+                   $$   $     $$$$   $$   $$$$     $   $$
+                   $$   $  $$$   $   $$   $   $$$  $   $$
+                   $$   $$$      $   $$   $      $$$   $$
+                   $$     $$$    $   $$   $    $$$     $$
+                    $$$      $$$ $   $$   $ $$$      $$$
+                       $$$      $$   $$   $$      $$$
+                          $$$        $$        $$$
+                             $$$     $$     $$$
+                                $$$  $$  $$$
+                                   $$$$$$
 """
     print(art)
     print(f"\n{Colors.BOLD}🚀 Welcome to the Operative Web Eval Agent Installer{Colors.NC}")
@@ -106,10 +106,10 @@ def run_command(command, shell=False):
     """Run a command and return its output"""
     try:
         result = subprocess.run(
-            command, 
-            shell=shell, 
-            check=True, 
-            text=True, 
+            command,
+            shell=shell,
+            check=True,
+            text=True,
             capture_output=True
         )
         return result.stdout
@@ -117,89 +117,7 @@ def run_command(command, shell=False):
         print_error(f"Command failed: {e}")
         return None
 
-def check_and_install_dependencies():
-    """Check for and install required dependencies (npm and jq)"""
-    print_header("Checking dependencies")
-    
-    # Check for npm
-    if not command_exists("npm"):
-        print_info("npm not found. Installing Node.js and npm...")
-        
-        system = platform.system()
-        if system == "Darwin":  # macOS
-            try:
-                # Try to use Homebrew
-                if command_exists("brew"):
-                    run_command(["brew", "install", "node"])
-                    print_success("npm installed successfully via Homebrew")
-                else:
-                    print_info("Homebrew not found. Please install Node.js/npm manually from https://nodejs.org/")
-                    print_info("After installing npm, run this script again.")
-                    sys.exit(1)
-            except Exception as e:
-                print_error(f"Failed to install npm: {e}")
-                
-        elif system == "Linux":
-            try:
-                # Try apt-get for Debian/Ubuntu
-                if command_exists("apt-get"):
-                    run_command(["sudo", "apt-get", "update"])
-                    run_command(["sudo", "apt-get", "install", "-y", "nodejs", "npm"])
-                    print_success("npm installed successfully via apt-get")
-                # Try yum for RHEL/CentOS/Fedora
-                elif command_exists("yum"):
-                    run_command(["sudo", "yum", "install", "-y", "nodejs", "npm"])
-                    print_success("npm installed successfully via yum")
-                else:
-                    print_info("Could not determine package manager. Please install Node.js/npm manually.")
-                    print_info("After installing npm, run this script again.")
-                    sys.exit(1)
-            except Exception as e:
-                print_error(f"Failed to install npm: {e}")
-                
-        elif system == "Windows":
-            print_info("Please install Node.js and npm from https://nodejs.org/")
-            print_info("After installing npm, run this script again.")
-            sys.exit(1)
-    else:
-        print_success("npm is already installed")
-    
-    # Check for jq
-    if not command_exists("jq"):
-        print_info("jq not found. Installing jq...")
-        
-        system = platform.system()
-        if system == "Darwin":  # macOS
-            try:
-                # Try to use Homebrew
-                if command_exists("brew"):
-                    run_command(["brew", "install", "jq"])
-                    print_success("jq installed successfully via Homebrew")
-                else:
-                    print_info("Homebrew not found. jq installation skipped, but it's not critical for this script.")
-            except Exception as e:
-                print_info(f"Failed to install jq: {e}. Continuing without jq (not critical).")
-                
-        elif system == "Linux":
-            try:
-                # Try apt-get for Debian/Ubuntu
-                if command_exists("apt-get"):
-                    run_command(["sudo", "apt-get", "update"])
-                    run_command(["sudo", "apt-get", "install", "-y", "jq"])
-                    print_success("jq installed successfully via apt-get")
-                # Try yum for RHEL/CentOS/Fedora
-                elif command_exists("yum"):
-                    run_command(["sudo", "yum", "install", "-y", "jq"])
-                    print_success("jq installed successfully via yum")
-                else:
-                    print_info("Could not determine package manager. jq installation skipped, but it's not critical for this script.")
-            except Exception as e:
-                print_info(f"Failed to install jq: {e}. Continuing without jq (not critical).")
-                
-        elif system == "Windows":
-            print_info("jq installation on Windows skipped, but it's not critical for this script.")
-    else:
-        print_success("jq is already installed")
+# Removed check_and_install_dependencies function
 
 def setup_agent():
     """
@@ -208,15 +126,14 @@ def setup_agent():
     """
     # Print welcome message with ASCII art
     print_welcome()
-    
-    # Check for and install required dependencies
-    check_and_install_dependencies()
-    
+
+    # Removed call to check_and_install_dependencies()
+
     # Step 1: Handle Operative API Key
     print_header("API Key Configuration")
     print(f"An Operative.sh API key is required for this installation.")
     print(f"If you don't have one, please visit {Colors.BOLD}https://operative.sh{Colors.NC} to get your key.\n")
-    
+
     api_key = os.environ.get('OPERATIVE_API_KEY')
     if not api_key:
         # Prompt for API key with validation
@@ -225,7 +142,7 @@ def setup_agent():
             if not api_key:
                 print(f"{Colors.RED}✗ API key cannot be empty{Colors.NC}")
                 continue
-            
+
             # Validate the API key
             print_info("Validating API key with Operative servers...")
             is_valid = asyncio.run(validate_api_key(api_key))
@@ -243,11 +160,11 @@ def setup_agent():
         is_valid = asyncio.run(validate_api_key(api_key))
         if not is_valid:
             print_error("Invalid API key in environment. Please provide a valid OperativeAI API key.")
-    
+
     # Step 2: Configure Cursor
     print_header("Configuring MCP server")
     cursor_config_path = Path.home() / ".cursor" / "mcp.json"
-    
+
     # Read existing config or create a new one
     try:
         if cursor_config_path.exists():
@@ -260,7 +177,7 @@ def setup_agent():
     except (FileNotFoundError, json.JSONDecodeError):
         config_data = {"mcpServers": {}}
         print_info(f"Creating new MCP configuration file")
-    
+
     # Define the server configuration for Cursor
     server_config_for_cursor = {
         "command": "uvx",
@@ -273,10 +190,10 @@ def setup_agent():
             "OPERATIVE_API_KEY": api_key
         }
     }
-    
+
     # Update the configuration
     config_data["mcpServers"]["web-eval-agent"] = server_config_for_cursor
-    
+
     # Write the updated configuration back to the file
     try:
         os.makedirs(cursor_config_path.parent, exist_ok=True)
@@ -285,7 +202,7 @@ def setup_agent():
         print_success(f"MCP server configuration updated successfully")
     except Exception as e:
         print_error(f"Error writing to Cursor config: {e}")
-    
+
     # Installation complete
     print_header("Installation Complete! 🎉")
     print("Your Operative Web Eval Agent has been set up successfully.")
@@ -323,7 +240,7 @@ async def web_eval_agent(url: str, task: str, working_directory: str, ctx: Conte
     if not api_key:
         error_message_str = "❌ Error: No API key provided. Please set the OPERATIVE_API_KEY environment variable."
         return [TextContent(type="text", text=error_message_str)]
-        
+
     is_valid = await validate_api_key(api_key)
 
     if not is_valid:
@@ -354,7 +271,7 @@ def main():
         api_key = os.environ.get('OPERATIVE_API_KEY')
         if not api_key:
             print_error("Error: No API key provided. Please set the OPERATIVE_API_KEY environment variable.")
-        
+
         try:
             # Run the FastMCP server
             print_info("Starting web-eval-agent MCP server")
