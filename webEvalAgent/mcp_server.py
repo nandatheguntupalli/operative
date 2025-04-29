@@ -144,10 +144,13 @@ def write_mcp_config(api_key: str):
                 "--from",
                 "git+https://github.com/nandatheguntupalli/operative",
                 "webEvalAgent",
-                "--run-server"
+                "--run-server" # Make sure this flag is present for subsequent runs
             ],
             "env": {
-                "OPERATIVE_API_KEY": api_key
+                "OPERATIVE_API_KEY": api_key,
+                # --- MODIFICATION HERE ---
+                "PLAYWRIGHT_BROWSERS_PATH": "0" # Use "0" for hermetic install
+                # --- END MODIFICATION ---
             }
         }
 
@@ -305,14 +308,19 @@ def main():
     if args.run_server:
         # --- Server Mode ---
         api_key = os.environ.get('OPERATIVE_API_KEY')
+        # Check for API key *before* validation
         if not api_key:
             print_error_and_exit("Server Error: No API key provided. Please set the OPERATIVE_API_KEY environment variable.")
+
+        # Validate the API key found in the environment for server mode
         try:
              is_valid = asyncio.run(validate_api_key(api_key))
              if not is_valid:
                   print_error_and_exit("Server Error: Invalid OPERATIVE_API_KEY provided in environment.")
         except Exception as e:
              print_error_and_exit(f"Server Error: Failed during API key validation: {e}")
+
+        # Key is valid, now run the server
         try:
             # Use print_info for console logs, not MCP communication
             print_info("Starting web-eval-agent MCP server...")
