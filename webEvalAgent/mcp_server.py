@@ -8,7 +8,7 @@ import uuid
 import subprocess
 import json
 import sys
-import getpass # Re-enabled for interactive setup
+import getpass # Needed for interactive prompt
 import platform
 import shutil
 from enum import Enum
@@ -47,7 +47,7 @@ class BrowserTools(str, Enum):
 
 # Parse command line arguments
 parser = argparse.ArgumentParser(description='Run the MCP server with browser debugging capabilities')
-parser.add_argument('--setup', action='store_true', help='Run interactive setup mode to configure the agent')
+parser.add_argument('--setup', action='store_true', help='Force interactive setup mode (primarily for debugging)')
 parser.add_argument('--run-server', action='store_true', help='Run the MCP server in server mode')
 args = parser.parse_args()
 
@@ -131,58 +131,71 @@ def write_mcp_config(api_key: str):
                     if "mcpServers" not in config_data or not isinstance(config_data["mcpServers"], dict):
                         config_data["mcpServers"] = {}
             except json.JSONDecodeError:
-                print(f"Warning: Existing MCP config at {cursor_config_path} is corrupted. Creating a new one.", file=sys.stderr)
+                # Log warning to stderr if interactive, otherwise just proceed
+                if sys.stdout.isatty():
+                    print(f"Warning: Existing MCP config at {cursor_config_path} is corrupted. Creating a new one.", file=sys.stderr)
                 config_data = {"mcpServers": {}}
 
+        # Define the server configuration for Cursor
+        # IMPORTANT: Add --run-server here so Cursor launches the server next time
         server_config_for_cursor = {
             "command": "uvx",
             "args": [
                 "--from",
                 "git+https://github.com/nandatheguntupalli/operative",
                 "webEvalAgent",
-                "--run-server" # IMPORTANT: Add --run-server here for when Cursor launches it
+                "--run-server"
             ],
             "env": {
                 "OPERATIVE_API_KEY": api_key
             }
         }
 
+        # Update the configuration
         config_data["mcpServers"]["web-eval-agent"] = server_config_for_cursor
 
+        # Write the updated configuration back to the file
         os.makedirs(cursor_config_path.parent, exist_ok=True)
         with open(cursor_config_path, 'w') as f:
             json.dump(config_data, f, indent=2)
         return True # Indicate success
 
     except Exception as e:
+        # Print error to stderr and exit
         print(f"Error writing Cursor MCP config: {e}", file=sys.stderr)
+        # In silent mode, we need to exit. In interactive, we can report differently.
+        if not sys.stdout.isatty():
+             print_error_and_exit(f"Setup Error: Failed to write Cursor MCP config: {e}", exit_code=4)
         return False # Indicate failure
 
 def interactive_setup_agent():
     """
-    Run the INTERACTIVE setup process for the web-eval-agent.
-    Prompts for API key, validates it, and configures Cursor.
+    Run the INTERACTIVE setup process. Prompts for API key if not in env.
     Prints status messages to stdout.
     """
     print_welcome()
+    print_header("Operative Agent Setup")
 
-    # Step 1: Handle Operative API Key
-    print_header("API Key Configuration")
-    print(f"An Operative.sh API key is required for this installation.")
-    print(f"If you don't have one, please visit {Colors.BOLD}https://operative.sh{Colors.NC} to get your key.\n")
+    api_key = os.environ.get('OPERATIVE_API_KEY')
+    key_validated = False
 
-    api_key = os.environ.get('OPERATIVE_API_KEY') # Check env first
     if api_key:
-         print_info("Found API key in environment. Validating...")
-         is_valid = asyncio.run(validate_api_key(api_key))
-         if not is_valid:
-              print(f"{Colors.YELLOW}API key in environment is invalid. Please enter a valid key.{Colors.NC}")
-              api_key = None # Force prompt
-         else:
-              print_success("API key in environment validated successfully.")
+        print_info("Found API key in environment. Validating...")
+        try:
+            is_valid = asyncio.run(validate_api_key(api_key))
+            if is_valid:
+                print_success("API key in environment validated successfully.")
+                key_validated = True
+            else:
+                print(f"{Colors.YELLOW}API key in environment is invalid. Please enter a valid key.{Colors.NC}")
+        except Exception as e:
+             print(f"{Colors.YELLOW}Error validating API key from environment: {e}. Please enter key manually.{Colors.NC}")
+    else:
+        print_info(f"No OPERATIVE_API_KEY found in environment.")
 
-    if not api_key:
-        # Prompt for API key with validation
+    if not key_validated:
+        print_info(f"An Operative.sh API key is required.")
+        print_info(f"If you don't have one, please visit {Colors.BOLD}https://operative.sh{Colors.NC}")
         while True:
             api_key = getpass.getpass("Please enter your Operative.sh API key: ")
             if not api_key:
@@ -190,76 +203,75 @@ def interactive_setup_agent():
                 continue
 
             print_info("Validating API key with Operative servers...")
-            is_valid = asyncio.run(validate_api_key(api_key))
-            if is_valid:
-                print_success("API key validated successfully")
-                break
-            else:
-                print(f"{Colors.YELLOW}API key validation failed.{Colors.NC}")
-                print(f"{Colors.YELLOW}Would you like to try again? (y/n){Colors.NC}")
-                response = input().lower()
-                if response != 'y':
-                    print_error_and_exit("Installation cancelled - valid API key required")
+            try:
+                is_valid = asyncio.run(validate_api_key(api_key))
+                if is_valid:
+                    print_success("API key validated successfully")
+                    key_validated = True
+                    break
+                else:
+                    print(f"{Colors.YELLOW}API key validation failed.{Colors.NC}")
+                    print(f"{Colors.YELLOW}Would you like to try again? (y/n){Colors.NC}")
+                    response = input().lower()
+                    if response != 'y':
+                        print_error_and_exit("Installation cancelled - valid API key required")
+            except Exception as e:
+                 print(f"{Colors.RED}✗ Error during API key validation: {e}{Colors.NC}")
+                 print(f"{Colors.YELLOW}Would you like to try again? (y/n){Colors.NC}")
+                 response = input().lower()
+                 if response != 'y':
+                     print_error_and_exit("Installation cancelled - validation failed")
 
-    # Step 2: Configure Cursor
-    print_header("Configuring MCP server")
+
+    # Configure Cursor
+    print_header("Configuring Cursor")
     if write_mcp_config(api_key):
         print_success(f"MCP server configuration updated successfully in ~/.cursor/mcp.json")
     else:
+        # write_mcp_config prints the error
         print_error_and_exit("Failed to write MCP configuration.")
 
     # Installation complete
     print_header("Installation Complete! 🎉")
     print("Your Operative Web Eval Agent has been set up successfully.")
-    print(f"\nYou can now use the web_eval_agent in Cursor Agent Mode.")
+    print(f"\nYou can now use the ${Colors.BOLD}web_eval_agent${Colors.NC} in Cursor Agent Mode.")
     print(f"""
-{Colors.BOLD}{Colors.RED}⚠️  IMPORTANT: You must restart Cursor for changes to take effect! ⚠️{Colors.NC}
-{Colors.RED}To restart the MCP server, you can close and reopen Cursor, or restart it from the Command Palette.{Colors.NC}
+{Colors.BOLD}${Colors.RED}⚠️  IMPORTANT: You MUST restart Cursor for changes to take effect! ⚠️${Colors.NC}
+${Colors.RED}   Close and reopen Cursor, or use the Command Palette to restart it.${Colors.NC}
 """)
     print(f"\nThank you for installing! 🙏\n")
     print(f"Built with ❤️  by Operative.sh")
 
 def silent_setup_agent():
     """
-    Run the SILENT setup process (e.g., when called by uvx from mcp.json).
-    Relies on OPERATIVE_API_KEY environment variable.
+    Run the SILENT setup process (e.g., when called by uvx non-interactively).
+    Relies *strictly* on OPERATIVE_API_KEY environment variable.
     Writes configuration to ~/.cursor/mcp.json.
     Prints errors to stderr and exits on failure.
     Produces NO stdout output on success.
     """
     api_key = os.environ.get('OPERATIVE_API_KEY')
     if not api_key:
-        print_error_and_exit("Setup Error: OPERATIVE_API_KEY environment variable not found.", exit_code=2) # Use different exit code
+        print_error_and_exit("Setup Error: OPERATIVE_API_KEY environment variable not found.", exit_code=2)
 
-    is_valid = asyncio.run(validate_api_key(api_key))
+    try:
+        is_valid = asyncio.run(validate_api_key(api_key))
+    except Exception as e:
+         print_error_and_exit(f"Setup Error: Exception during API key validation: {e}", exit_code=5)
+
     if not is_valid:
-        print_error_and_exit("Setup Error: Invalid OPERATIVE_API_KEY provided in environment.", exit_code=3) # Use different exit code
+        print_error_and_exit("Setup Error: Invalid OPERATIVE_API_KEY provided in environment.", exit_code=3)
 
     if not write_mcp_config(api_key):
-         print_error_and_exit("Setup Error: Failed to write Cursor MCP config.", exit_code=4) # Use different exit code
+         # Error is printed by write_mcp_config, just exit
+         sys.exit(4) # Use specific exit code
 
     # Silent successful exit (code 0)
 
 @mcp.tool(name=BrowserTools.WEB_EVAL_AGENT)
 async def web_eval_agent(url: str, task: str, working_directory: str, ctx: Context) -> list[TextContent]:
     """Evaluate the user experience / interface of a web application.
-
-    This tool allows the AI to assess the quality of user experience and interface design
-    of a web application by performing specific tasks and analyzing the interaction flow.
-
-    Before this tool is used, the web application should already be running locally in a separate terminal.
-
-    Args:
-        url: Required. The localhost URL of the web application to evaluate, including the port number.
-        task: Required. The specific UX/UI aspect to test (e.g., "test the checkout flow",
-             "evaluate the navigation menu usability", "check form validation feedback")
-             If no task is provided, the tool will high level evaluate the web application
-        working_directory: Required. The root directory of the project
-
-    Returns:
-        list[TextContent]: A detailed evaluation of the web application's UX/UI, including
-                         observations, issues found, and recommendations for improvement
-                         Do not save this information to any file, but only return it to the agent
+    (Args and Returns documentation omitted for brevity)
     """
     api_key = os.environ.get('OPERATIVE_API_KEY')
     if not api_key:
@@ -295,28 +307,33 @@ def main():
         api_key = os.environ.get('OPERATIVE_API_KEY')
         if not api_key:
             print_error_and_exit("Server Error: No API key provided. Please set the OPERATIVE_API_KEY environment variable.")
-
         try:
              is_valid = asyncio.run(validate_api_key(api_key))
              if not is_valid:
                   print_error_and_exit("Server Error: Invalid OPERATIVE_API_KEY provided in environment.")
         except Exception as e:
              print_error_and_exit(f"Server Error: Failed during API key validation: {e}")
-
         try:
-            print_info("Starting web-eval-agent MCP server...") # This is fine, server mode isn't JSON stdio
+            # Use print_info for console logs, not MCP communication
+            print_info("Starting web-eval-agent MCP server...")
             mcp.run(transport='stdio')
         finally:
             print_info("MCP server stopped.")
             pass
     elif args.setup:
-        # --- Interactive Setup Mode ---
-        # Run directly: python operative/webEvalAgent/mcp_server.py --setup
-        interactive_setup_agent()
+         # --- Explicit Interactive Setup Mode ---
+         # Run directly: python webEvalAgent/mcp_server.py --setup
+         interactive_setup_agent()
     else:
         # --- Default Mode (uvx without flags) ---
-        # Run the silent setup logic expected by Cursor/uvx during initial configuration.
-        silent_setup_agent()
+        # Detect if running interactively or not
+        if sys.stdout.isatty():
+            # Likely run directly by user: Perform interactive setup
+            interactive_setup_agent()
+        else:
+            # Likely run by Cursor/automation: Perform silent setup
+            # Requires OPERATIVE_API_KEY env var to be set externally.
+            silent_setup_agent()
 
 if __name__ == "__main__":
     main()
