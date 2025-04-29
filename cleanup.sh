@@ -11,4 +11,6 @@ JQ_PATH=$(which jq)
 if [ ! -z "$JQ_PATH" ]; then sudo mv "$JQ_PATH" "${JQ_PATH}_backup"; echo "jq temporarily backed up"; fi
 echo "Removing Cursor MCP configuration..."
 rm -f ~/.cursor/mcp.json
+echo "Removing Playwright cache..."
+rm -rf ~/Library/Caches/ms-playwright/
 echo "Cleanup complete! Now run: uvx --from git+https://github.com/nandatheguntupalli/operative webEvalAgent"
