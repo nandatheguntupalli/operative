@@ -9,6 +9,8 @@ import warnings
 from contextlib import redirect_stdout, redirect_stderr
 from typing import Dict, Any, Tuple, List, Optional
 from collections import deque
+import sys
+from playwright.__main__ import main as playwright_main
 
 # Import log server function
 from .log_server import send_log
@@ -165,6 +167,24 @@ async def handle_response(response):
         # Send error to dashboard with type 'status' or 'agent'
         send_log(f"Error handling response event for {url}: {e}", "❌", log_type='status')
 
+def ensure_playwright_browsers_installed():
+    """
+    Ensure Playwright browsers are installed. If not, install them programmatically.
+    """
+    try:
+        from playwright.sync_api import sync_playwright
+        with sync_playwright() as p:
+            # Try launching a browser to check if installed
+            p.chromium.launch(headless=True)
+        send_log("Playwright browsers already installed.", "✅", log_type='status')
+    except Exception as e:
+        send_log(f"Playwright browsers not found, installing: {e}", "⚠️", log_type='status')
+        try:
+            playwright_main(["install", "chromium"])
+            send_log("Playwright browsers installed successfully.", "✅", log_type='status')
+        except Exception as install_error:
+            send_log(f"Failed to install Playwright browsers: {install_error}", "❌", log_type='status')
+            raise
 
 async def run_browser_task(task: str, model: str = "gemini-2.0-flash-001", ctx: Context = None, tool_call_id: str = None, api_key: str = None) -> str:
     """
@@ -182,6 +202,9 @@ async def run_browser_task(task: str, model: str = "gemini-2.0-flash-001", ctx: 
     """
     global agent_instance, console_log_storage, network_request_storage, original_create_context
     import traceback # Make sure traceback is imported for error logging
+
+    # Ensure Playwright browsers are installed before proceeding
+    ensure_playwright_browsers_installed()
 
     # --- Clear Logs for this Run ---
     console_log_storage.clear()
